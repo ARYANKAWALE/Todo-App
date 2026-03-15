@@ -13,7 +13,7 @@ app.use(express.json())
 app.use(cookieParser())
 
 app.use(cors({
-    origin: [process.env.CORS_ORIGIN, "https://todo-app-p2hw.onrender.com", "https://todo-app-p2hw.onrender.com"],
+    origin: [process.env.CORS_ORIGIN, "https://todo-app-1-6evs.onrender.com"],
     credentials: true
 }))
 

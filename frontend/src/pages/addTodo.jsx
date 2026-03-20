@@ -1,70 +1,180 @@
-import React from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useState } from 'react'
-import axios from 'axios'
-import toast from 'react-hot-toast'
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { motion } from "framer-motion";
+import { ArrowLeft, Check } from "lucide-react";
 
 const AddTodo = () => {
-    const navigate = useNavigate()
-    const [headline, setHeadline] = useState('')
-    const [content, setContent] = useState('')
-    const [loading, setLoading] = useState(false)
+  const navigate = useNavigate();
+  const [headline, setHeadline] = useState("");
+  const [content, setContent] = useState("");
+  const [priority, setPriority] = useState("Medium");
+  const [category, setCategory] = useState("General");
+  const [dueDate, setDueDate] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault()
-        setLoading(true)
-        try {
-            const response = await axios.post('/api/v4/todos/add', {
-                headline,
-                content
-            }, {
-                withCredentials: true
-            })
-            toast.success("Todo added successfully")
-            navigate('/')
-        } catch (error) {
-            console.log("Error adding todo", error)
-            toast.error("Failed to add todo")
-        } finally {
-            setLoading(false)
-        }
+  // Explicitly sync theme rendering
+  const isDark = localStorage.getItem("theme") === "dark";
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await axios.post(
+        "/api/v4/todos/add",
+        {
+          headline,
+          content,
+          priority,
+          category,
+          dueDate: dueDate || undefined,
+        },
+        {
+          withCredentials: true,
+        },
+      );
+      toast.success("Task created!");
+      navigate("/");
+    } catch (error) {
+      console.log("Error adding todo", error);
+      toast.error("Failed to add task");
+    } finally {
+      setLoading(false);
     }
+  };
 
+  // Styling helpers
+  const bgMain = isDark ? "bg-[#050505]" : "bg-[#fafafa]";
+  const textMain = isDark ? "text-white" : "text-gray-900";
+  const textMuted = isDark ? "text-gray-400" : "text-gray-500";
+  const cardBg = isDark
+    ? "bg-[#111] shadow-none"
+    : "bg-white shadow-xl border border-gray-100";
+  const borderSubtle = isDark ? "border-white/5" : "border-gray-100";
+  const inputBg = isDark
+    ? "bg-[#1a1a1a] border-white/5 text-white focus:border-white/20"
+    : "bg-gray-50 border-gray-200 text-black focus:border-gray-300";
+  const buttonStyle = isDark
+    ? "bg-white text-black hover:bg-gray-200"
+    : "bg-black text-white hover:bg-gray-800";
 
-
-
-    return (
-        <div className='min-h-screen bg-[#fafafa] text-black flex justify-center items-center p-4'>
-            <div className='bg-[#fdfdfd] rounded-2xl shadow-xl w-full max-w-[70vh] pb-8'>
-                <div className='flex gap-2 bg-gray-500 p-2 rounded-tr-2xl rounded-tl-2xl'>
-                    <div className='w-4 h-4 bg-red-500 rounded-full flex items-center justify-center group cursor-pointer hover:bg-red-600 transition-colors'>
-                        <span className='hidden group-hover:block text-[10px] font-bold text-red-900'>×</span>
-                    </div>
-                    <div className='w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center group cursor-pointer hover:bg-yellow-600 transition-colors'>
-                        <span className='hidden group-hover:block text-[10px] font-bold text-yellow-900'>−</span>
-                    </div>
-                    <div className='w-4 h-4 bg-green-500 rounded-full flex items-center justify-center group cursor-pointer hover:bg-green-600 transition-colors'>
-                        <span className='hidden group-hover:block text-[10px] font-bold text-green-900'>+</span>
-                    </div>
-                </div>
-                <h2 className='text-2xl font-bold mb-6 pl-6 pr-6'>Add New Todo</h2>
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4 pl-6 pr-6">
-                        <label htmlFor="headline" className="block text-sm font-medium mb-2">Headline</label>
-                        <input type="text" id="headline" value={headline} onChange={(e) => setHeadline(e.target.value)} className="w-full p-2 text-black bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                    <div className="mb-4 pl-6 pr-6">
-                        <label htmlFor="content" className="block text-sm font-medium mb-2">Content</label>
-                        <textarea id="content" value={content} onChange={(e) => setContent(e.target.value)} className="w-full p-2 text-black bg-gray-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                    </div>
-                    <div className='flex justify-between items-center gap-10 pl-6 pr-6'>
-                        <button className=' w-full bg-red-500 text-white p-2 rounded-md hover:bg-red-600 transition-colors' onClick={() => navigate('/')} type="button">Cancel</button>
-                        <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition-colors">Add Todo</button>
-                    </div>
-                </form>
-            </div>
+  return (
+    <div
+      className={`min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8 ${bgMain} font-sans`}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`w-full max-w-2xl rounded-3xl overflow-hidden ${cardBg}`}
+      >
+        <div
+          className={`px-6 py-5 md:px-8 border-b flex items-center justify-between ${borderSubtle}`}
+        >
+          <button
+            onClick={() => navigate("/")}
+            className={`p-2 -ml-2 transition-colors focus:outline-none ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-black"}`}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h2 className={`text-lg md:text-xl font-bold ${textMain}`}>
+            Create Task
+          </h2>
+          <div className="w-9"></div>
         </div>
-    )
-}
 
-export default AddTodo
+        <form
+          onSubmit={handleSubmit}
+          className="p-6 md:p-8 space-y-5 md:space-y-6"
+        >
+          <div className="space-y-2">
+            <label
+              htmlFor="headline"
+              className={`text-sm font-bold ${textMuted}`}
+            >
+              Title
+            </label>
+            <input
+              type="text"
+              id="headline"
+              required
+              value={headline}
+              onChange={(e) => setHeadline(e.target.value)}
+              className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none transition-all ${inputBg}`}
+              placeholder="What needs to be done?"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6">
+            <div className="space-y-2">
+              <label className={`text-sm font-bold ${textMuted}`}>
+                Priority
+              </label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none transition-all appearance-none ${inputBg}`}
+              >
+                <option value="Low">Low Priority</option>
+                <option value="Medium">Medium Priority</option>
+                <option value="High">High Priority</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className={`text-sm font-bold ${textMuted}`}>
+                Date (Optional)
+              </label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none transition-all ${inputBg}`}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className={`text-sm font-bold ${textMuted}`}>Category</label>
+            <input
+              type="text"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none transition-all ${inputBg}`}
+              placeholder="Work, Personal, etc."
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="content"
+              className={`text-sm font-bold ${textMuted}`}
+            >
+              Details
+            </label>
+            <textarea
+              id="content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all resize-none h-28 ${inputBg}`}
+              placeholder="Add notes..."
+            ></textarea>
+          </div>
+
+          <div className="pt-4 sm:pt-6">
+            <button
+              type="submit"
+              disabled={loading || !headline}
+              className={`w-full flex justify-center items-center gap-2 py-3 rounded-xl font-bold transition-all ${loading || !headline ? "opacity-50 cursor-not-allowed bg-gray-300 dark:bg-[#222]" : `hover:scale-[1.02] shadow-sm ${buttonStyle}`}`}
+            >
+              <Check className="w-5 h-5" />{" "}
+              {loading ? "Creating..." : "Save Task"}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
+export default AddTodo;

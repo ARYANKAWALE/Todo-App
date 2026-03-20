@@ -1,191 +1,279 @@
-import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import axios from 'axios'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faTrashCan } from '@fortawesome/free-solid-svg-icons'
-import toast from 'react-hot-toast'
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { Trash2, ArrowLeft, Check } from "lucide-react";
+import toast from "react-hot-toast";
+import { motion } from "framer-motion";
 
 const EditTodo = () => {
-    const { id } = useParams()
-    const navigate = useNavigate()
+  const { id } = useParams();
+  const navigate = useNavigate();
 
-    const [headline, setHeadline] = useState('')
-    const [content, setContent] = useState('')
-    const [initialHeadline, setInitialHeadline] = useState('')
-    const [initialContent, setInitialContent] = useState('')
-    const [loading, setLoading] = useState(true)
-    const [deleting, setDeleting] = useState(false)
+  const [headline, setHeadline] = useState("");
+  const [content, setContent] = useState("");
+  const [priority, setPriority] = useState("Medium");
+  const [category, setCategory] = useState("General");
+  const [dueDate, setDueDate] = useState("");
+  const [completed, setCompleted] = useState(false);
 
+  const [initialState, setInitialState] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Apply exact explicit theme control
+  const isDark = localStorage.getItem("theme") === "dark";
+
+  useEffect(() => {
     const fetchTodo = async () => {
-        try {
-            const response = await axios.get(`/api/v4/todos/${id}`, {
-                withCredentials: true
-            })
-            console.log("Fetched Todo:", response.data)
-            setHeadline(response.data.data.headline)
-            setContent(response.data.data.content)
-            setInitialHeadline(response.data.data.headline)
-            setInitialContent(response.data.data.content)
-            setLoading(false)
-        } catch (error) {
-            console.log("Error fetching todo", error)
-            toast.error("Failed to load todo")
-            setLoading(false)
-        }
+      try {
+        const response = await axios.get(`/api/v4/todos/${id}`, {
+          withCredentials: true,
+        });
+        const todo = response.data.data;
+        setHeadline(todo.headline);
+        setContent(todo.content || "");
+        setPriority(todo.priority || "Medium");
+        setCategory(todo.category || "General");
+        setDueDate(
+          todo.dueDate
+            ? new Date(todo.dueDate).toISOString().split("T")[0]
+            : "",
+        );
+        setCompleted(todo.completed || false);
+
+        setInitialState({
+          headline: todo.headline,
+          content: todo.content,
+          priority: todo.priority || "Medium",
+          category: todo.category || "General",
+          dueDate: todo.dueDate
+            ? new Date(todo.dueDate).toISOString().split("T")[0]
+            : "",
+          completed: todo.completed || false,
+        });
+        setLoading(false);
+      } catch (error) {
+        console.log("Error fetching todo", error);
+        toast.error("Failed to load task");
+        navigate("/");
+      }
+    };
+    fetchTodo();
+  }, [id, navigate]);
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    setUpdating(true);
+
+    const updateData = { headline, content, priority, category, completed };
+    if (dueDate) updateData.dueDate = dueDate;
+
+    const updatePromise = axios.patch(
+      `/api/v4/todos/modify/${id}`,
+      updateData,
+      { withCredentials: true },
+    );
+
+    toast.promise(updatePromise, {
+      loading: "Saving...",
+      success: "Task updated!",
+      error: "Failed to update",
+    });
+
+    try {
+      await updatePromise;
+      setTimeout(() => navigate("/"), 800);
+    } catch (error) {
+      console.log("Error updating todo", error);
+      setUpdating(false);
     }
+  };
 
-    useEffect(() => {
-        fetchTodo()
-    }, [id])
+  const handleDeleteTodo = async () => {
+    const confirmDelete = window.confirm("Delete this task permanently?");
+    if (!confirmDelete) return;
 
-    const handleUpdate = async (e) => {
-        e.preventDefault()
+    setDeleting(true);
+    const deletePromise = axios.delete(`/api/v4/todos/modify/${id}`, {
+      withCredentials: true,
+    });
 
-        const updatePromise = axios.patch(`/api/v4/todos/modify/${id}`, {
-            headline: headline,
-            content: content
-        }, {
-            withCredentials: true
-        })
+    toast.promise(deletePromise, {
+      loading: "Deleting...",
+      success: "Deleted.",
+      error: "Failed to delete",
+    });
 
-        toast.promise(
-            updatePromise,
-            {
-                loading: 'Updating todo...',
-                success: 'Todo updated successfully!',
-                error: 'Failed to update todo',
-            }
-        )
-
-        try {
-            const response = await updatePromise
-            console.log("Update Success:", response.data)
-            setTimeout(() => navigate('/'), 1000)
-        } catch (error) {
-            console.log("Error updating todo", error)
-        }
+    try {
+      await deletePromise;
+      setTimeout(() => navigate("/"), 800);
+    } catch (error) {
+      console.error("Error deleting:", error);
+      setDeleting(false);
     }
+  };
 
-    const handleDeleteTodo = async (id) => {
-        const confirmDelete = window.confirm(
-            "Are you sure you want to delete this todo? This action cannot be undone."
-        )
+  const isChanged =
+    initialState &&
+    (headline !== initialState.headline ||
+      content !== initialState.content ||
+      priority !== initialState.priority ||
+      category !== initialState.category ||
+      dueDate !== initialState.dueDate ||
+      completed !== initialState.completed);
 
-        if (!confirmDelete) return
+  const bgMain = isDark ? "bg-[#050505]" : "bg-[#fafafa]";
+  const textMain = isDark ? "text-white" : "text-gray-900";
+  const textMuted = isDark ? "text-gray-400" : "text-gray-500";
+  const cardBg = isDark
+    ? "bg-[#111] shadow-none"
+    : "bg-white shadow-xl border border-gray-100";
+  const borderSubtle = isDark ? "border-white/5" : "border-gray-100";
+  const inputBg = isDark
+    ? "bg-[#1a1a1a] border-white/5 text-white focus:border-white/20"
+    : "bg-gray-50 border-gray-200 text-black focus:border-gray-300";
+  const buttonStyle = isDark
+    ? "bg-white text-black hover:bg-gray-200"
+    : "bg-black text-white hover:bg-gray-800";
 
-        setDeleting(true)
-
-        const deletePromise = axios.delete(`/api/v4/todos/modify/${id}`, {
-            withCredentials: true
-        })
-
-        toast.promise(
-            deletePromise,
-            {
-                loading: 'Deleting todo...',
-                success: 'Todo deleted successfully!',
-                error: (err) => {
-                    const errorMessage = err.response?.data?.message || 'Failed to delete todo. Please try again.'
-                    return errorMessage
-                },
-            }
-        )
-
-        try {
-            await deletePromise
-            setTimeout(() => navigate("/"), 1000)
-        } catch (error) {
-            console.error("Error deleting todo:", error)
-        } finally {
-            setDeleting(false)
-        }
-    }
-
-    const isChanged = headline !== initialHeadline || content !== initialContent
-
-    if (loading) return (
-        <div className="min-h-screen text-black flex justify-center items-center">
-            <div className="text-xl">Loading Todo...</div>
-        </div>
-    )
-
+  if (loading) {
     return (
-        <div className="min-h-screen bg-[#fafafa] text-black flex justify-center items-center p-4">
-            <div className='bg-[#fdfdfd] rounded-2xl shadow-xl w-full max-w-[70vh] pb-8'>
-                <div className='flex gap-2 bg-gray-500 p-2 rounded-tr-2xl rounded-tl-2xl'>
-                    <div className='w-4 h-4 bg-red-500 rounded-full flex items-center justify-center group cursor-pointer hover:bg-red-600 transition-colors'>
-                        <span className='hidden group-hover:block text-[10px] font-bold text-red-900'>×</span>
-                    </div>
-                    <div className='w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center group cursor-pointer hover:bg-yellow-600 transition-colors'>
-                        <span className='hidden group-hover:block text-[10px] font-bold text-yellow-900'>−</span>
-                    </div>
-                    <div className='w-4 h-4 bg-green-500 rounded-full flex items-center justify-center group cursor-pointer hover:bg-green-600 transition-colors'>
-                        <span className='hidden group-hover:block text-[10px] font-bold text-green-900'>+</span>
-                    </div>
-                </div>
-                <div className='flex justify-between items-center mb-6 pl-6 pr-6 pt-2'>
-                    <h1 className="text-3xl font-bold text-center text-blue-500">Edit Todo</h1>
-                    <FontAwesomeIcon
-                        icon={faTrashCan}
-                        className={`hover:text-red-500 transition-colors text-gray-500 text-3xl ${deleting
-                            ? 'opacity-50 cursor-not-allowed animate-pulse'
-                            : 'cursor-pointer'
-                            }`}
-                        onClick={() => !deleting && handleDeleteTodo(id)}
-                        title={deleting ? "Deleting..." : "Delete Todo"}
-                    />
-                </div>
-                <form onSubmit={handleUpdate} className="flex flex-col gap-4">
+      <div
+        className={`min-h-screen ${bgMain} flex justify-center items-center`}
+      >
+        <div
+          className={`animate-spin rounded-full h-8 w-8 border-b-2 ${textMain}`}
+        ></div>
+      </div>
+    );
+  }
 
-                    <div className="flex flex-col gap-2 pl-6 pr-6">
-                        <label className="text-gray-400 text-sm">Headline</label>
-                        <input
-                            type="text"
-                            value={headline}
-                            onChange={(e) => setHeadline(e.target.value)}
-                            className="bg-gray-200 text-black p-3 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
-                            placeholder="Enter Headline"
-                            disabled={deleting}
-                        />
-                    </div>
-
-                    <div className="flex flex-col gap-2 pl-6 pr-6">
-                        <label className="text-gray-400 text-sm">Content</label>
-                        <textarea
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            rows="6"
-                            className="bg-gray-200 text-black p-3 rounded-lg focus:outline-none focus:border-blue-500 transition-colors resize-none"
-                            placeholder="Enter Content"
-                            disabled={deleting}
-                        />
-                    </div>
-
-                    <div className="flex gap-4 mt-4 pl-6 pr-6">
-                        <button
-                            type="button"
-                            onClick={() => navigate('/')}
-                            className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg transition-all"
-                            disabled={deleting}
-                        >
-                            Cancel
-                        </button>
-                        <button onClick={handleUpdate}
-                            type="submit"
-                            disabled={!isChanged || deleting}
-                            className={`flex-1 font-bold py-3 rounded-lg transition-all shadow-lg ${isChanged && !deleting
-                                ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/30'
-                                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                                }`}
-                        >
-                            Update Todo
-                        </button>
-                    </div>
-
-                </form>
-            </div>
+  return (
+    <div
+      className={`min-h-screen flex items-center justify-center p-4 sm:p-6 md:p-8 ${bgMain} font-sans`}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`w-full max-w-2xl rounded-3xl overflow-hidden ${cardBg}`}
+      >
+        <div
+          className={`px-6 py-5 md:px-8 border-b flex items-center justify-between ${borderSubtle}`}
+        >
+          <button
+            onClick={() => navigate("/")}
+            className={`p-2 -ml-2 transition-colors focus:outline-none ${isDark ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-black"}`}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h2 className={`text-lg md:text-xl font-bold ${textMain}`}>
+            Edit Task
+          </h2>
+          <button
+            onClick={() => !deleting && handleDeleteTodo()}
+            className={`p-2 -mr-2 transition-colors hover:text-red-500 ${isDark ? "text-gray-400" : "text-gray-500"} ${deleting ? "opacity-50 cursor-not-allowed" : ""}`}
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
         </div>
-    )
-}
 
-export default EditTodo
+        <form
+          onSubmit={handleUpdate}
+          className="p-6 md:p-8 space-y-5 md:space-y-6"
+        >
+          <label
+            className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${inputBg}`}
+          >
+            <input
+              type="checkbox"
+              checked={completed}
+              onChange={(e) => setCompleted(e.target.checked)}
+              className={`w-5 h-5 rounded border focus:ring-1 focus:ring-offset-1 ${isDark ? "border-white/20 bg-[#222] text-white focus:ring-white focus:ring-offset-[#111]" : "border-gray-300 text-black focus:ring-black focus:ring-offset-white"}`}
+            />
+            <div>
+              <p className={`font-bold text-sm ${textMain}`}>
+                {completed ? "Task Completed" : "Mark Complete"}
+              </p>
+            </div>
+          </label>
+
+          <div className="space-y-2">
+            <label className={`text-sm font-bold ${textMuted}`}>Title</label>
+            <input
+              type="text"
+              required
+              disabled={deleting}
+              value={headline}
+              onChange={(e) => setHeadline(e.target.value)}
+              className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none transition-all ${inputBg}`}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 md:gap-6">
+            <div className="space-y-2">
+              <label className={`text-sm font-bold ${textMuted}`}>
+                Priority
+              </label>
+              <select
+                disabled={deleting}
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none transition-all appearance-none ${inputBg}`}
+              >
+                <option value="Low">Low Priority</option>
+                <option value="Medium">Medium Priority</option>
+                <option value="High">High Priority</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className={`text-sm font-bold ${textMuted}`}>Date</label>
+              <input
+                disabled={deleting}
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none transition-all ${inputBg}`}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className={`text-sm font-bold ${textMuted}`}>Category</label>
+            <input
+              disabled={deleting}
+              type="text"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className={`w-full px-4 py-2.5 rounded-xl border focus:outline-none transition-all ${inputBg}`}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className={`text-sm font-bold ${textMuted}`}>Details</label>
+            <textarea
+              disabled={deleting}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className={`w-full px-4 py-3 rounded-xl border focus:outline-none transition-all resize-none h-28 ${inputBg}`}
+            ></textarea>
+          </div>
+
+          <div className="pt-4 sm:pt-6">
+            <button
+              type="submit"
+              disabled={!isChanged || updating || deleting}
+              className={`w-full flex justify-center items-center gap-2 py-3 rounded-xl font-bold transition-all ${!isChanged || updating || deleting ? "opacity-50 cursor-not-allowed bg-gray-300 dark:bg-[#222]" : `hover:scale-[1.02] shadow-sm ${buttonStyle}`}`}
+            >
+              <Check className="w-5 h-5" />{" "}
+              {updating ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
+export default EditTodo;
